@@ -1,0 +1,22 @@
+{
+  "name": "shoutbox",
+  "version": "1.0.0",
+  "description": "a simple shoutbox app for Ovos",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ovos",
+    "shoutbox",
+    "node",
+    "socket.io"
+  ],
+  "author": "Ehsan M.Vazifeh",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.15.2",
+    "parse": "^1.9.2",
+    "socket.io": "^1.7.3"
+  }
+}
