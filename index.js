@@ -18,12 +18,12 @@ app.get('/',function(req,res){
   res.sendFile(path.join(__dirname,'public/index.html'));
 });
 
-http.listen(8000, function(){
+http.listen(8001, function(){
   console.log('listening on *:8000');
 });
 
 // Initiating Parse Chats and Users tables
-var ChatMessage = Parse.Object.extend("Chats");
+var Chats = Parse.Object.extend("Chats");
 var Users = Parse.Object.extend("Users");
 
 var numUsers = 0;
@@ -31,12 +31,11 @@ var numUsers = 0;
 // Connecting to Socket.io
 io.on('connection', function (socket) {
   var addedUser = false;
-  console.log("a user connected");
-
+  
   // when the client emits 'new message', this listens and executes
   socket.on('new message', function (data) {
     // we tell the client to execute 'new message'
-    var chatMessage = new ChatMessage();
+    var chatMessage = new Chats();
     if (data.hasFile) {
       socket.broadcast.emit('new message', {
         username: data.username,
@@ -50,6 +49,7 @@ io.on('connection', function (socket) {
       var file = new Parse.File(data[1], { base64: base64 });
       file.save().then(function(success) {
         chatMessage.set("imageUrl", success._url);
+	chatMessage.set("hasFile",true);
         chatMessage.set("message", data.message);
         chatMessage.set("username", data.username);
         chatMessage.set("date", data.date);
@@ -77,7 +77,8 @@ io.on('connection', function (socket) {
       });
         chatMessage.set("date", data.date);
         chatMessage.set("message", data.message);
-        chatMessage.set("username", data.username);
+        chatMessage.set("hasFile",false);
+	chatMessage.set("username", data.username);
         chatMessage.save(null, {
           success: function(chatMessage) {
         // Execute any logic that should take place after the object is saved.
@@ -94,8 +95,20 @@ io.on('connection', function (socket) {
 
   // when the client emits 'add user', this listens and executes
   socket.on('add user', function (data) {
-    console.log(addedUser)
     if (addedUser) return;
+    
+     var queryChats = new Parse.Query(Chats);
+    queryChats.ascending("createdAt").find().then(
+     function(res) {
+        var data = [];
+        for (var i=0;i<10;i++) {
+          data[i] = { username : res[i].get("username"),
+          message : res[i].get("message"),
+	  hasFile: res[i].get("hasFile"),
+          dataUrl : res[i].get("imageUrl")};
+        }
+        socket.emit("history",data);
+     });
 
     // we store the username in the socket session for this client
     socket.username = data[0];
@@ -166,8 +179,7 @@ io.on('connection', function (socket) {
 
   // when the client emits 'typing', we broadcast it to others
   socket.on('remove', function (data) {
-    var chats = Parse.Object.extend("Chats");
-    var queryChats = new Parse.Query(chats);
+    var queryChats = new Parse.Query(Chats);
     queryChats.ascending("createdAt").find().then(
      function(res) {
       res[0].destroy({

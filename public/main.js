@@ -60,7 +60,6 @@ $(function() {
       $chatPage.show();
       $loginPage.off('click');
       $currentInput = $inputMessage.focus();
-
       // Tell the server your username
       socket.emit('add user', [username,ipData]);
     }
@@ -95,6 +94,12 @@ $(function() {
         date: new Date()
       };
       }
+     
+	if (data.username == username) {
+          data.sender = true;
+        }else{
+          data.sender = false;
+        } 
       addChatMessage(data);
       // tell server to execute 'new message' and send along one parameter
       socket.emit('new message', data);
@@ -130,8 +135,13 @@ $(function() {
       $typingMessages.remove();
     }
 
-    var $usernameDiv = $('<span class="username"/>')
-      .text(data.username)
+    var $usernameDiv = $('<span class="username"/>');
+    if (data.sender) {
+     $usernameDiv.text("me");
+    } else {
+     $usernameDiv.text(data.username);
+    }    
+    $usernameDiv
       .css('color', getUsernameColor(data.username));
     var $messageBodyDiv = $('<span class="messageBody">');
     if(new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(data.message)) {
@@ -149,6 +159,12 @@ $(function() {
     }
     var typingClass = data.typing ? 'typing' : '';
     var $messageDiv = $('<li class="message"/>')
+    if (data.sender) {
+      $messageDiv.css("background-color","#aff2a9");      
+    } else {
+      $messageDiv.css("background-color","#b5bce5");      
+    }
+    $messageDiv
       .data('username', data.username)
       .addClass(typingClass)
       .attr('id', data.date)
@@ -174,6 +190,7 @@ $(function() {
   function addChatTyping (data) {
     data.typing = true;
     data.message = 'is typing';
+    data.sender = false;
     addChatMessage(data);
   }
 
@@ -352,9 +369,22 @@ $(function() {
 
   // Whenever the server emits 'new message', update the chat body
   socket.on('new message', function (data) {
-    addChatMessage(data);
+    if (data.username == username) {
+          data.sender = true;
+        }else{
+          data.sender = false;
+        }
+	addChatMessage(data);
   });
 
+
+	// if user already exist go to chat page
+  socket.on('user ip', function (data) {
+    username = data;
+    setUsername();
+  });
+
+  
   // Whenever the server emits 'user joined', log it in the chat body
   socket.on('user joined', function (data) {
     log(data.username + ' joined');
@@ -393,10 +423,15 @@ $(function() {
     log('attempt to reconnect has failed');
   });
 
-// if user already exist go to chat page
-  socket.on('user ip', function (data) {
-    username = data;
-    setUsername();
+    socket.on('history',function (data) {
+    for (var i=0;i<data.length;i++) {
+        if (data[i].username == username) {
+          data[i].sender = true;
+        }else{
+          data[i].sender = false;
+        }
+       addChatMessage(data[i]);
+    }
   });
 
 });
